@@ -1,13 +1,14 @@
 # Cordon Bleu – Flask Web App
 
-A Python/Flask web application built as part of a collaborative university project on the theme of Gastronomy (Politehnica University of Bucharest, group 444D). The app presents information about the classic Cordon Bleu dish: its origin, description, and preparation.
+A Python/Flask web application built as part of a collaborative university project on the theme of Gastronomy (Politehnica University of Bucharest, group 444D). The app presents information about the classic Cordon Bleu dish: its description and origin.
 
 ## Technologies Used
 
 | Category | Tools |
 |---|---|
-| Backend | Python 3, Flask |
-| Testing | pytest |
+| Backend | Python 3.11, Flask |
+| Testing | pytest, unittest |
+| Linting | pylint |
 | CI/CD | Jenkins (declarative pipeline) |
 | Containerization | Docker |
 | Version Control | Git / GitHub |
@@ -17,16 +18,19 @@ A Python/Flask web application built as part of a collaborative university proje
 ```
 .
 ├── app/
-│   └── lib/
+│   ├── __init__.py
+│   ├── lib/
+│   │   ├── __init__.py
+│   │   └── biblioteca_gastronomie.py   # Business logic (descriere, origine)
+│   └── tests/
 │       ├── __init__.py
-│       └── biblioteca_gastronomie.py   # Business logic for Cordon Bleu
-├── img/                                 # Screenshots
-├── Dockerfile                           # Container configuration
-├── Jenkinsfile                          # CI/CD pipeline (install → lint → test)
-├── gastronomie.py                       # Flask application entry point
-├── requirements.txt                     # Python dependencies
-├── test_gastronomie.py                  # Unit tests
-└── README.md
+│       └── test_cordon_bleu.py         # Unit tests (4 tests)
+├── img/                                # Screenshots
+├── conftest.py
+├── Dockerfile                          # python:3.11-slim, port 5000
+├── Jenkinsfile                         # Install → Lint → Test pipeline
+├── gastronomie.py                      # Flask app entry point
+└── requirements.txt                    # flask, pytest, pylint
 ```
 
 ## Available Routes
@@ -34,22 +38,22 @@ A Python/Flask web application built as part of a collaborative university proje
 | Route | Description |
 |---|---|
 | `/gastronomie` | Main gastronomy page |
-| `/cordon_bleu` | Cordon Bleu overview page |
+| `/cordon_bleu` | Cordon Bleu overview |
 | `/cordon_bleu/descriere` | Dish description |
-| `/cordon_bleu/origine` | Origin and history of the dish |
+| `/cordon_bleu/origine` | Origin and history |
 
 ## Running Locally
 
 **Prerequisites:** Python 3.x, pip
 
 ```bash
-git clone https://github.com/<your-username>/cordon-bleu-flask-app
+git clone https://github.com/stefangitu/cordon-bleu-flask-app
 cd cordon-bleu-flask-app
 pip install -r requirements.txt
 python gastronomie.py
 ```
 
-The app starts on `http://localhost:5000`.
+App starts on `http://localhost:5000`. Navigate to `/gastronomie` to begin.
 
 ## Running with Docker
 
@@ -58,32 +62,31 @@ docker build -t cordon-bleu-app .
 docker run -p 5000:5000 cordon-bleu-app
 ```
 
-Access the app at `http://localhost:5000`.
-
 ## Running Tests
 
 ```bash
-python -m pytest test_gastronomie.py -v
+PYTHONPATH=$(pwd) python -m pytest app/tests/test_cordon_bleu.py -v
 ```
 
-All tests passed successfully both locally and through the Jenkins pipeline.
+4 tests covering all routes — status codes and response content validation.
 
 ## CI/CD – Jenkins Pipeline
 
-The Jenkinsfile defines a declarative pipeline with three stages:
+The Jenkinsfile defines a declarative pipeline with four stages:
 
-1. **Install** – sets up a virtual environment and installs dependencies from `requirements.txt`
-2. **Lint** – runs static code analysis
-3. **Test** – executes unit tests via pytest
+1. **Install Python** – ensures Python 3 and pip are available on the agent
+2. **Install Dependencies** – installs Flask, pytest, pylint via pip
+3. **Lint** – runs pylint across all source files (non-blocking)
+4. **Test** – executes unit tests via pytest with PYTHONPATH set correctly
 
 ## Challenges & Solutions
 
-- **Jenkins environment isolation:** The pipeline initially failed because system-level Python packages conflicted with project dependencies. Solved by configuring a dedicated virtual environment within the Jenkins workspace.
-- **Docker port binding on Linux:** Running the container with the default Flask host (`127.0.0.1`) made the app unreachable from outside the container. Fixed by setting `host='0.0.0.0'` in the Flask run configuration.
+- **PYTHONPATH in Jenkins:** Tests failed initially because Jenkins couldn't resolve the top-level `gastronomie` module from within `app/tests/`. Fixed by explicitly setting `PYTHONPATH=$(pwd)` in the test stage.
+- **Docker host binding:** Flask defaults to `127.0.0.1`, making the app unreachable from outside the container. Fixed by setting `host='0.0.0.0'` in `app.run()`.
 
 ## Future Improvements
 
 - Add ingredient quantity calculator (scale recipe for N servings)
-- Add a preparation timer per step
-- Extend to a full recipe database with search functionality
+- Extend to a full recipe database with search and filter
+- Add HTML templates via Jinja2 instead of inline HTML strings
 - Add authentication for user-submitted recipes
